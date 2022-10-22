@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+const PORT = ":5000"
+
 type Server struct {
 	pb.UnimplementedSendMessageServer
 }
@@ -30,9 +32,7 @@ func main() {
 
 	pb.RegisterSendMessageServer(grpcServer, &Server{})
 
-	port := ":5000"
-
-	listener, err := net.Listen("tcp", port)
+	listener, err := net.Listen("tcp", PORT)
 
 	if err != nil {
 		log.Fatal(err)
