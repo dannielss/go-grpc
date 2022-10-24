@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SendMessageClient interface {
 	RequestMessage(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	GetUsers(ctx context.Context, in *Request, opts ...grpc.CallOption) (SendMessage_GetUsersClient, error)
 }
 
 type sendMessageClient struct {
@@ -42,11 +43,44 @@ func (c *sendMessageClient) RequestMessage(ctx context.Context, in *Request, opt
 	return out, nil
 }
 
+func (c *sendMessageClient) GetUsers(ctx context.Context, in *Request, opts ...grpc.CallOption) (SendMessage_GetUsersClient, error) {
+	stream, err := c.cc.NewStream(ctx, &SendMessage_ServiceDesc.Streams[0], "/SendMessage/GetUsers", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &sendMessageGetUsersClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type SendMessage_GetUsersClient interface {
+	Recv() (*User, error)
+	grpc.ClientStream
+}
+
+type sendMessageGetUsersClient struct {
+	grpc.ClientStream
+}
+
+func (x *sendMessageGetUsersClient) Recv() (*User, error) {
+	m := new(User)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // SendMessageServer is the server API for SendMessage service.
 // All implementations must embed UnimplementedSendMessageServer
 // for forward compatibility
 type SendMessageServer interface {
 	RequestMessage(context.Context, *Request) (*Response, error)
+	GetUsers(*Request, SendMessage_GetUsersServer) error
 	mustEmbedUnimplementedSendMessageServer()
 }
 
@@ -56,6 +90,9 @@ type UnimplementedSendMessageServer struct {
 
 func (UnimplementedSendMessageServer) RequestMessage(context.Context, *Request) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestMessage not implemented")
+}
+func (UnimplementedSendMessageServer) GetUsers(*Request, SendMessage_GetUsersServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetUsers not implemented")
 }
 func (UnimplementedSendMessageServer) mustEmbedUnimplementedSendMessageServer() {}
 
@@ -88,6 +125,27 @@ func _SendMessage_RequestMessage_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SendMessage_GetUsers_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Request)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SendMessageServer).GetUsers(m, &sendMessageGetUsersServer{stream})
+}
+
+type SendMessage_GetUsersServer interface {
+	Send(*User) error
+	grpc.ServerStream
+}
+
+type sendMessageGetUsersServer struct {
+	grpc.ServerStream
+}
+
+func (x *sendMessageGetUsersServer) Send(m *User) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // SendMessage_ServiceDesc is the grpc.ServiceDesc for SendMessage service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -100,6 +158,12 @@ var SendMessage_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SendMessage_RequestMessage_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GetUsers",
+			Handler:       _SendMessage_GetUsers_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "proto/message.proto",
 }
