@@ -4,6 +4,7 @@ option go_package = "/pb";
 
 service SendMessage {
   rpc RequestMessage (Request) returns (Response);
+  rpc GetUsers(Request) returns (stream User);
 }
 
 message Request {
@@ -12,4 +13,9 @@ message Request {
 
 message Response {
   int32 status = 1;
+}
+
+message User {
+  string name = 1;
+  int32 age = 2;
 }
