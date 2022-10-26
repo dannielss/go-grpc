@@ -25,6 +25,5 @@
 # Build application
 $ go build
 
-```sh
 # Generate gRPC code
 $ protoc --go_out=. --go-grpc_out=. proto/*.proto
